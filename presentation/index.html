@@ -5,44 +5,82 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Authority as Code — the Sandbox Kit Spec</title>
 <meta name="description" content="A 40-minute tour of Docker Sandbox Kit v3: containment over containers, a Kit as one OCI image, and authority as code." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
-  :root { --ink: #0B1533; }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
-  body { font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  #stage {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
+  /* ---- Docker /Next palette (from presentation/theme.py) ---- */
+  :root {
+    --bg:     #0F1626;   /* main surface */
+    --bg2:    #0B111E;   /* darker panel */
+    --hex:    #26365A;   /* hexagon weave */
+    --blue:   #1D63ED;   /* Docker blue accent */
+    --sky:    #7DA2FF;
+    --mute:   #9AA9C9;
+    --mute2:  #66769B;
+    --card:   #FFFFFF;   /* white card */
+    --ink:    #101A2E;   /* text on white card */
+    --shadow: #05080F;   /* hard offset shadow */
+    --mono: "IBM Plex Mono", Menlo, "DejaVu Sans Mono", monospace;
   }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--mono);
+    background:
+      /* top-right Docker-blue glow (matches COVER_DEFS) */
+      radial-gradient(80% 80% at 86% 14%, rgba(29,99,237,.30), rgba(29,99,237,0) 60%),
+      /* faint hexagon weave */
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='78' height='90' viewBox='0 0 78 90'%3E%3Cg fill='none' stroke='%2326365A' stroke-width='1' opacity='0.5'%3E%3Cpolygon points='26,0 52,15 52,45 26,60 0,45 0,15'/%3E%3Cpolygon points='26,60 52,75 52,105 26,120 0,105 0,75'/%3E%3Cpolygon points='65,-15 91,0 91,30 65,45 39,30 39,0'/%3E%3Cpolygon points='65,45 91,60 91,90 65,105 39,90 39,60'/%3E%3C/g%3E%3C/svg%3E")
+        repeat,
+      var(--bg);
+  }
+
+  #stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
   #slide {
-    max-width: 100%; max-height: 100%;
-    width: auto; height: auto;
-    aspect-ratio: 16 / 9;
-    object-fit: contain;
+    max-width: 100%; max-height: 100%; width: auto; height: auto;
+    aspect-ratio: 16 / 9; object-fit: contain;
     user-select: none; -webkit-user-drag: none;
   }
+
   /* Nav zones */
-  .zone {
-    position: absolute; top: 0; bottom: 0; width: 33%;
-    cursor: pointer; z-index: 5;
-  }
+  .zone { position: absolute; top: 0; bottom: 0; width: 33%; cursor: pointer; z-index: 5; }
   .zone.left  { left: 0; }
   .zone.right { right: 0; }
-  /* HUD */
+
+  /* ---- footer chrome: "D O C K E R  /  N E X T" + Docker mark ---- */
+  #chrome {
+    position: fixed; left: 0; right: 0; bottom: 0; height: 54px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px; pointer-events: none; z-index: 8;
+  }
+  #brand {
+    color: #5a6a8f; font-weight: 700; font-size: 13px; letter-spacing: 2px;
+  }
+  #brand b { color: var(--blue); }
+  #chrome .mark { width: 34px; opacity: .92; fill: #fff; }
+
+  /* ---- HUD: white card on a hard offset shadow (the /Next look) ---- */
   #hud {
-    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
-    z-index: 10; display: flex; align-items: center; gap: 14px;
-    color: #cdd7f5; background: rgba(11,21,51,.55);
-    padding: 7px 14px; border-radius: 999px;
-    backdrop-filter: blur(6px); opacity: 0; transition: opacity .25s;
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 10; display: flex; align-items: center; gap: 6px;
+    background: var(--card); color: var(--ink);
+    border-radius: 12px; padding: 6px 8px;
+    box-shadow: 7px 8px 0 var(--shadow);
+    opacity: 0; transition: opacity .2s;
   }
-  body:hover #hud { opacity: 1; }
+  body:hover #hud, #hud:focus-within { opacity: 1; }
   #hud button {
-    all: unset; cursor: pointer; color: #fff; font-size: 16px;
-    padding: 2px 8px; border-radius: 6px;
+    all: unset; cursor: pointer; font-family: var(--mono); font-weight: 700;
+    color: var(--ink); font-size: 15px; line-height: 1;
+    padding: 7px 11px; border-radius: 8px;
   }
-  #hud button:hover { background: rgba(255,255,255,.12); }
-  #counter { font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
+  #hud button:hover { background: var(--blue); color: #fff; }
+  #counter {
+    font-variant-numeric: tabular-nums; font-weight: 700; font-size: 14px;
+    color: var(--ink); min-width: 62px; text-align: center; letter-spacing: 1px;
+  }
+  #counter b { color: var(--blue); }
 </style>
 </head>
 <body>
@@ -52,9 +90,14 @@
   <div class="zone left"  id="prevZone" aria-label="Previous slide"></div>
   <div class="zone right" id="nextZone" aria-label="Next slide"></div>
 
+  <div id="chrome">
+    <span id="brand">D O C K E R&nbsp;&nbsp;<b>/</b>&nbsp;&nbsp;N E X T</span>
+    <svg class="mark" viewBox="0 0 100 70" aria-hidden="true"><path d="M98.3 30.4c-2.7-1.8-8.9-2.5-13.7-1.6-.6-4.5-3.1-8.4-7.7-11.9l-2.6-1.7-1.7 2.6c-2.2 3.3-2.8 8.8-.4 12.9-1.1.6-3.2 1.4-6 1.3H1.2l-.2 1c-.6 3.6-.6 14.9 6.7 23.6C13.2 63.9 21.5 68 32 68c22.8 0 39.6-10.5 47.5-29.6 3.1.1 9.8.1 13.2-6.4.2-.4.8-1.4 1.6-3.6l.3-.9-2.3-1.1zM52.5 25.6h-8.9v8.9h8.9v-8.9zm-11.9 0h-8.9v8.9h8.9v-8.9zm-11.9 0H19.8v8.9h8.9v-8.9zm-11.9 0H7.9v8.9h8.9v-8.9zm35.7-11.9h-8.9v8.9h8.9v-8.9zm-11.9 0h-8.9v8.9h8.9v-8.9zm-11.9 0H19.8v8.9h8.9v-8.9zm23.8-11.9h-8.9v8.9h8.9V1.9z"/></svg>
+  </div>
+
   <div id="hud">
     <button id="prev" title="Previous (←)">◀</button>
-    <span id="counter">1 / 27</span>
+    <span id="counter"><b id="cur">1</b> / <span id="tot">27</span></span>
     <button id="next" title="Next (→)">▶</button>
     <button id="full" title="Fullscreen (F)">⤢</button>
   </div>
@@ -65,19 +108,17 @@
   var src = function (n) { return "assets/slide-" + pad(n) + ".webp"; };
 
   var img = document.getElementById("slide");
-  var counter = document.getElementById("counter");
+  var cur = document.getElementById("cur");
+  document.getElementById("tot").textContent = TOTAL;
 
   // Start from #hash (e.g. #7) if present, else slide 1.
   var i = Math.min(Math.max(parseInt(location.hash.slice(1), 10) || 1, 1), TOTAL);
 
   function render() {
     img.src = src(i);
-    counter.textContent = i + " / " + TOTAL;
-    if (("" + i) !== location.hash.slice(1)) {
-      history.replaceState(null, "", "#" + i);
-    }
-    // Preload the next slide.
-    if (i < TOTAL) { new Image().src = src(i + 1); }
+    cur.textContent = i;
+    if (("" + i) !== location.hash.slice(1)) { history.replaceState(null, "", "#" + i); }
+    if (i < TOTAL) { new Image().src = src(i + 1); }  // preload next
   }
   function go(n) { i = Math.min(Math.max(n, 1), TOTAL); render(); }
   function next() { if (i < TOTAL) go(i + 1); }
