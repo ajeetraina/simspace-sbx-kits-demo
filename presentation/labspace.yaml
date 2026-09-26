@@ -1,0 +1,27 @@
+# "Authority as Code — the Sandbox Kit Spec" — a 40-minute deck in the new
+# Docker /Next theme, presented in Labspace/Simspace as full-bleed slides.
+# Every page is a full-bleed image so the branding matches the master exactly;
+# the slides are authored as SVG and rendered to .webp by build.py (see
+# README.md). Split on lines of exactly `---`; speaker notes ride on `Note:`.
+kind: slides
+title: "Authority as Code — the Sandbox Kit Spec"
+description: "A 40-minute tour of Docker Sandbox Kit v3: containment over containers, a Kit as one OCI image, authority as a diffable/gatable capabilities list, why it's a spec (not a feature), and why to migrate from v2 to v3. Watch the talk, then read the spec."
+
+# Landing-page card. `order: 1` so the deck reads as "watch the talk first".
+# labs.json is GENERATED from this block — never edit labs.json by hand.
+catalog:
+  icon: slideshow
+  order: 1
+  tags: ["sandbox kits", "authority as code", "agentic security", "slides", "start here"]
+  estimatedMinutes: 40
+
+version: "1.0.0"
+
+# Dark is the deck's default surface — it matches the deep-blue /Next cover and
+# section slides, so any native live-demo slides sit seamlessly among the images.
+theme: dark
+
+# One chapter holds the whole deck; slides within it split on `---`.
+slides:
+  - title: Workshop
+    contentPath: deck.md

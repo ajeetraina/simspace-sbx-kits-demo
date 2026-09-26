@@ -1,0 +1,20 @@
+# Preview this deck locally in Simspace (the same runtime as the reference
+# workshop). The authoring image serves labs from public/labs/*, so we mount
+# this directory in as a single lab collection entry.
+#
+#   docker compose up dev            # live preview at http://localhost:5173
+#   # then open the "Authority as Code — the Sandbox Kit Spec" slides card
+#
+# Pin SIMSPACE_AUTHORING_IMAGE to a release for reproducible authoring.
+name: sandbox-kit-deck
+
+services:
+  dev:
+    image: ${SIMSPACE_AUTHORING_IMAGE:-dockersamples/simspace-authoring:latest}
+    command: npm run dev
+    ports:
+      - "5173:5173"
+    volumes:
+      # This deck dir becomes one lab under the catalog; labs.json is generated
+      # from public/labs/*/labspace.yaml at dev-server start.
+      - ./:/usr/local/app/public/labs/authority-as-code-slides

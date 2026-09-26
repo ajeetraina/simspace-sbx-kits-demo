@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Authority as Code: the Docker Sandbox Kit Spec v3</title>
+<meta name="description" content="Dockerfiles made software reproducible. Kits make authority reproducible. A tour of the open Docker Sandbox Kit Specification v3 — and why it moved on from v2." />
+<style>
+  :root{
+    --navy:#0B1533; --navy2:#0F1E3D; --panel:#132546;
+    --blue:#1D63ED; --blue2:#2563EB; --sky:#7DA2FF; --mist:#B9C6E6;
+    --ink:#0B1533; --sub:#51607F; --line:#E7ECF6;
+    --card:#F7F9FF; --stroke:#E2E8F8;
+    --green:#1A7F37; --greenbg:#E9F6EE; --red:#B91C1C; --amber:#B45309; --amberbg:#FEF3E2;
+    --wrap:820px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    color:var(--ink);background:#fff;line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,kbd{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+
+  /* top bar */
+  .top{position:sticky;top:0;z-index:10;background:rgba(11,21,51,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid #1c2f55}
+  .top .in{max-width:1120px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:12px}
+  .top .brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:800;letter-spacing:.3px}
+  .top .brand small{color:var(--sky);font-weight:700;letter-spacing:2px;font-size:12px}
+  .top .spacer{flex:1}
+  .top .cta{color:#fff;border:1px solid #2a4a80;padding:8px 16px;border-radius:9px;font-weight:700;font-size:14px}
+  .top .cta:hover{background:#16305c;text-decoration:none}
+
+  /* hero */
+  .hero{position:relative;overflow:hidden;background:
+    radial-gradient(60% 90% at 85% 10%, rgba(29,99,237,.34), rgba(29,99,237,0) 60%),
+    linear-gradient(150deg,var(--navy),var(--navy2) 55%,#0A1B3A)}
+  .hero .in{max-width:1120px;margin:0 auto;padding:84px 24px 72px;position:relative;z-index:2}
+  .hero .kick{color:var(--sky);font-weight:800;letter-spacing:4px;font-size:13px;margin:0 0 18px}
+  .hero h1{color:#fff;font-size:clamp(34px,5.4vw,60px);line-height:1.06;margin:0 0 20px;letter-spacing:-.5px;
+    max-width:15ch}
+  .hero .accent{width:64px;height:6px;background:var(--blue);border-radius:3px;margin:0 0 22px}
+  .hero p.lede{color:var(--mist);font-size:clamp(18px,2.2vw,23px);max-width:44ch;margin:0}
+  .hero .meta{margin-top:34px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;color:#93a6cf;font-size:14px}
+  .hero .badge{background:var(--amberbg);color:var(--amber);font-weight:800;padding:5px 12px;border-radius:999px;font-size:12px}
+  .hero .whale{position:absolute;right:-40px;top:40px;opacity:.9;z-index:1}
+  .dots{position:absolute;inset:0;background-image:radial-gradient(rgba(125,162,255,.10) 1.3px,transparent 1.3px);
+    background-size:44px 44px;z-index:0}
+
+  /* article */
+  article{max-width:var(--wrap);margin:0 auto;padding:56px 24px 40px;font-size:18px}
+  article > p{margin:0 0 22px}
+  h2{font-size:clamp(24px,3.4vw,33px);letter-spacing:-.4px;margin:52px 0 6px;line-height:1.15}
+  h2 .n{color:var(--blue);font-weight:800;font-size:15px;letter-spacing:2px;display:block;margin-bottom:6px}
+  h3{font-size:21px;margin:34px 0 4px}
+  .sub{color:var(--sub);margin:0 0 18px}
+  strong{color:var(--ink)}
+  .lead{font-size:21px;color:#25324f}
+
+  .figure{margin:30px 0;background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:14px;
+    box-shadow:0 12px 34px rgba(11,21,51,.07)}
+  .figure img{width:100%;display:block;border-radius:8px}
+  .figure figcaption{color:var(--sub);font-size:14px;margin-top:10px;padding:0 4px}
+  .figure.bleed{max-width:1080px;margin-left:calc((var(--wrap) - 1080px)/2)}
+  @media(max-width:1120px){.figure.bleed,.figure.bleed{margin-left:0}}
+
+  blockquote{margin:30px 0;padding:22px 26px;background:linear-gradient(150deg,var(--navy),#12244a);
+    border-radius:16px;color:#eaf0ff;font-size:21px;line-height:1.45;position:relative}
+  blockquote p{margin:0 0 8px}
+  blockquote strong{color:#fff}
+  blockquote code{background:#1b336a;color:#bcd4ff}
+  blockquote cite{color:var(--sky);font-style:normal;font-weight:700;font-size:15px}
+
+  .pullwall{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:26px 0}
+  @media(max-width:720px){.pullwall{grid-template-columns:1fr}}
+  .pc{border:1px solid var(--stroke);border-radius:14px;padding:18px;background:#fff}
+  .pc .v2{color:var(--red);font-weight:800;font-size:12px;letter-spacing:1px}
+  .pc .prob{color:#2c3a5b;font-size:15px;margin:8px 0 14px}
+  .pc .v3{color:var(--green);font-weight:800;font-size:17px}
+  .pc .fix{color:var(--sub);font-size:14px;margin-top:3px}
+
+  pre{background:#0B1B36;color:#C9D6F0;border:1px solid #213a63;border-radius:14px;padding:20px 22px;
+    overflow:auto;font-size:14.5px;line-height:1.7;margin:22px 0}
+  pre .c{color:#6E86B8}
+  pre .g{color:#7EE0A1}
+  pre .b{color:#8FB4FF}
+  :not(pre)>code{background:#EEF3FF;color:var(--blue);padding:2px 7px;border-radius:6px;font-size:.9em}
+
+  .callout{border:1px solid var(--stroke);border-left:5px solid var(--blue);background:var(--card);
+    border-radius:12px;padding:18px 22px;margin:26px 0}
+  .callout.exp{border-left-color:var(--amber);background:var(--amberbg)}
+  .keyline{border:0;border-top:1px solid var(--line);margin:46px 0}
+
+  .tldr{background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:22px 26px;margin:8px 0 8px}
+  .tldr h4{margin:0 0 10px;font-size:14px;letter-spacing:2px;color:var(--blue)}
+  .tldr ul{margin:0;padding-left:20px}
+  .tldr li{margin:7px 0}
+
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:26px 0}
+  @media(max-width:720px){.cards{grid-template-columns:1fr}}
+  .card{border:1px solid var(--stroke);border-radius:14px;padding:20px;background:#fff}
+  .card h4{margin:0 0 6px;font-size:18px}
+  .card .k{font-weight:800;color:var(--blue);font-size:12px;letter-spacing:1.5px}
+  .card p{margin:6px 0 0;font-size:15px;color:#33415f}
+
+  footer{background:var(--navy);color:var(--mist);margin-top:60px}
+  footer .in{max-width:1120px;margin:0 auto;padding:44px 24px;display:flex;gap:30px;flex-wrap:wrap;
+    align-items:center;justify-content:space-between}
+  footer a{color:var(--sky)}
+  footer .links{display:flex;gap:24px;flex-wrap:wrap;font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- Docker mark, reused inline -->
+<svg width="0" height="0" style="position:absolute"><defs>
+  <g id="whale"><path fill="#fff" d="M98.3 30.4c-2.7-1.8-8.9-2.5-13.7-1.6-.6-4.5-3.1-8.4-7.7-11.9l-2.6-1.7-1.7 2.6c-2.2 3.3-2.8 8.8-.4 12.9-1.1.6-3.2 1.4-6 1.3H1.2l-.2 1c-.6 3.6-.6 14.9 6.7 23.6C13.2 63.9 21.5 68 32 68c22.8 0 39.6-10.5 47.5-29.6 3.1.1 9.8.1 13.2-6.4.2-.4.8-1.4 1.6-3.6l.3-.9-2.3-1.1zM52.5 25.6h-8.9v8.9h8.9v-8.9zm-11.9 0h-8.9v8.9h8.9v-8.9zm-11.9 0H19.8v8.9h8.9v-8.9zm-11.9 0H7.9v8.9h8.9v-8.9zm35.7-11.9h-8.9v8.9h8.9v-8.9zm-11.9 0h-8.9v8.9h8.9v-8.9zm-11.9 0H19.8v8.9h8.9v-8.9zm23.8-11.9h-8.9v8.9h8.9V1.9z"/></g>
+</defs></svg>
+
+<div class="top"><div class="in">
+  <span class="brand"><svg width="26" height="20" viewBox="0 0 100 74"><use href="#whale"/></svg>
+    Docker <small>/ NEXT</small></span>
+  <span class="spacer"></span>
+  <a class="cta" href="https://github.com/docker/sandbox-kit-spec">Read the spec →</a>
+</div></div>
+
+<header class="hero">
+  <div class="dots"></div>
+  <svg class="whale" width="320" height="290" viewBox="0 0 100 74"><use href="#whale"/></svg>
+  <div class="in">
+    <p class="kick">DOCKER SANDBOXES · SPECIFICATION</p>
+    <h1>Authority as Code: the Sandbox Kit Spec</h1>
+    <div class="accent"></div>
+    <p class="lede">Dockerfiles made software reproducible. Kits make <em>authority</em> reproducible.</p>
+    <div class="meta">
+      <span class="badge">EXPERIMENTAL · v3</span>
+      <span>By Ajeet Raina</span><span>·</span><span>September 25, 2026</span><span>·</span>
+      <span>Apache-2.0</span>
+    </div>
+  </div>
+</header>
+
+<article>
+
+  <div class="tldr">
+    <h4>TL;DR</h4>
+    <ul>
+      <li>A container isolates an application. An agent is an <strong>actor</strong> — it decides what to do next, with authority you grant. The boundary has to move from the container to the <strong>containment</strong>.</li>
+      <li>A <strong>Kit</strong> is one OCI image that declares everything an agent needs from the world around it — network, credentials, volumes, tools, context — as one typed, versioned <code>capabilities</code> list.</li>
+      <li>Authority becomes <strong>diffable and gatable</strong>: a new host or credential shows up as added lines in a pull request, and a runtime can auto-approve within scope and stop on any widening.</li>
+      <li>It's a <strong>specification</strong>, not a feature — vendor-neutral, with conformance suites. Docker Sandboxes is the first implementation, not the only one.</li>
+      <li>v3 moves on from v2 for concrete reasons: <strong>a kit is now one image</strong>, <strong>mixins ship real binaries as layers</strong>, and the capability schema is <strong>open and versioned</strong>.</li>
+    </ul>
+  </div>
+
+  <p class="lead">A Dockerfile answers everything about the software itself: how it's built, what gets
+  packaged, and how it starts. That answer was worth a decade of tooling — the same bits build,
+  pull, and run the same way on every machine that has ever heard of an OCI image.</p>
+
+  <p>Then we started shipping agents. And an agent is not a static application workload. A container
+  isolates an application: a thing that runs, does its job, and touches only what it was handed. An
+  agent is an <strong>actor</strong>. It decides what to do next and then does it — to your filesystem,
+  your network, your databases, your cloud account — with authority you granted on purpose.</p>
+
+  <figure class="figure bleed">
+    <img src="assets/slide-04.webp" alt="A container isolates an application with a fixed boundary; an agent is an actor reaching out to filesystem, network, databases and cloud." />
+    <figcaption>The word “container” quietly stopped fitting: a container has a fixed boundary; an agent reaches outward.</figcaption>
+  </figure>
+
+  <h2><span class="n">01 · THE BOUNDARY</span>The container was never the boundary</h2>
+  <p>That authority is not a flaw to be closed off; it is the point. An agent that cannot install a
+  dependency, reach an API, or hold a credential cannot do the job. But every grant trades away a
+  piece of the isolation you were counting on — which is how the capabilities that make an agent
+  useful end up dissolving the walls around it.</p>
+
+  <p>So the boundary has to move out: from the container to the <strong>containment</strong> — the
+  machine, the filesystem, the network, the credentials, everything the agent can reach or change. A
+  sandbox supplies the part a model cannot argue with: its own kernel, a boundary that is
+  <em>enforced</em> rather than agreed to. But an empty sandbox is not an environment. Something still
+  has to say which harness runs, which tools and MCP servers it gets, which skills and instructions
+  shape it, and exactly what it is allowed to touch.</p>
+
+  <h2><span class="n">02 · THE KIT</span>From Dockerfile to Kit</h2>
+  <p>None of that is a Dockerfile's question. It specifies the inside of the image completely and the
+  outside not at all — so the other half has lived in <code>docker run</code> flags, a Compose file, a
+  CI config, an onboarding doc, and whatever the person who set it up still remembers. Outside the
+  artifact, unversioned, and unreviewable.</p>
+
+  <p>A Kit brings it in: the content <em>and</em> the authority it asks for, in one image, under one
+  digest. There is no Kit media type, no artifact type, no sidecar file. A Kit is one OCI image where
+  a manifest annotation — <code>vnd.docker.sandbox.kit.descriptor</code> — carries the Kit's
+  declarations and the layers carry its content.</p>
+
+  <figure class="figure bleed">
+    <img src="assets/slide-07.webp" alt="A Kit is one OCI image: a manifest annotation carries the declarations, layers carry the content; it pulls with docker pull, inspects with regctl, and can be FROM-ed." />
+    <figcaption>Everything follows from “it's just an image.” Nothing new to store, nothing to keep in sync.</figcaption>
+  </figure>
+
+  <p>Because it's an ordinary image, a Kit pulls with <code>docker pull</code>, gets inspected with
+  <code>regctl</code>, and can be <code>FROM</code>-ed like any other image. A registry that has never
+  heard of Kits stores one correctly, and an engine that ignores the annotation still runs it. There
+  are two kinds: a <strong>workload</strong> — the thing that runs, exactly one per composition — and
+  any number of <strong>mixins</strong>, overlays that add a CLI, a credential binding, a network rule,
+  or context for the agent.</p>
+
+  <h2><span class="n">03 · AUTHORITY AS CODE</span>The permission slip</h2>
+  <p>Here is where it gets concrete. This is the <code>gh</code> mixin — read it like a permission slip.</p>
+
+<pre><span class="c"># gh.yaml — a mixin</span>
+capabilities:
+  - type: <span class="b">network-policy@2</span>
+      allow:
+        - <span class="g">github.com</span>
+        - hosts: [<span class="g">api.github.com</span>]
+      deny:
+        - hosts: [api.github.com]
+          methods: [DELETE]
+          paths: [/repos/**]        <span class="c"># deny wins</span>
+
+  - type: <span class="b">credential@1</span>
+      apiKey: {name: GH_TOKEN, <span class="g">proxyManaged: true</span>}</pre>
+
+  <p>It reaches GitHub and nowhere else. It allows most API methods — but not deletes under
+  <code>/repos/**</code>. So the token can open a pull request, and it <strong>cannot delete the
+  repository</strong>. And the credential is proxy-managed: the runtime injects the real value at the
+  boundary; inside the sandbox only a sentinel ever exists.</p>
+
+  <figure class="figure bleed">
+    <img src="assets/slide-12.webp" alt="Proxy-managed credentials: inside the sandbox the agent holds only a sentinel; the boundary proxy holds the real token and injects it on the way out to api.github.com." />
+    <figcaption>The real secret never enters the box. Leaked logs, prompt injection, a rogue tool — all get a fake.</figcaption>
+  </figure>
+
+  <p>The principle underneath is simple: <strong>asks, not grants</strong>. A Kit never grants itself
+  anything — it asks, in a typed, versioned request. The host decides. A conforming runtime enforces.
+  A required capability that cannot be satisfied refuses the launch — <em>fail closed</em>; an optional
+  one degrades gracefully.</p>
+
+  <h3>Composition is a function, not a sequence</h3>
+  <p>Mixins are ordered by their dependency graph — <code>provides</code> and <code>requires</code> —
+  not the order you typed the flags. The same set always composes to the same image: lockable,
+  reproducible, cacheable. Resolution is strict on purpose: exactly one workload, every requirement
+  satisfied from inside the set or resolution fails, and two Kits providing the same name is an error
+  rather than silent shadowing.</p>
+
+  <h3>The diff is the review</h3>
+  <p>Because authority now lives in the artifact, git already reviews it. When the next version of an
+  agent asks for another credential or another network destination, that is not a software update — it
+  is a change in <em>authority</em>. It shows up in the diff, it can stop for approval, and it travels
+  with the thing it describes wherever that thing runs.</p>
+
+  <figure class="figure bleed">
+    <img src="assets/slide-15.webp" alt="Gating: record the normalized set at approval; compare the next version; within scope updates run with no prompt, any widening stops and asks; removing a deny counts as widening." />
+    <figcaption>Every descriptor reduces to a normalized set the host can compare — so authority upgrades gate themselves.</figcaption>
+  </figure>
+
+  <h2><span class="n">04 · WHY v3</span>What v3 fixes — in the engineer's words</h2>
+  <p>v3 is a real break from v2, and the reasons are practical. In a walkthrough of the new spec, the
+  Docker engineer who built it laid them out plainly. The headline change is one sentence:</p>
+
+  <blockquote>
+    <p>“The biggest change… it's kind of this tiny sentence here: <strong>a kit is one OCI image.</strong>
+    And because it's just an image, you can use normal <code>docker build</code> to create kits anywhere
+    you want in CI — you don't have to install <code>sbx</code> or any special tooling.”</p>
+    <cite>— Docker engineer, v3 spec walkthrough</cite>
+  </blockquote>
+
+  <p>Three concrete problems drove the redesign:</p>
+
+  <div class="pullwall">
+    <div class="pc">
+      <div class="v2">v2 · THE DECOUPLING</div>
+      <div class="prob">A kit's metadata lived apart from its “companion content image” — the template.
+        “That has been very confusing to people.”</div>
+      <div class="v3">→ one OCI image</div>
+      <div class="fix">the descriptor rides in the image metadata</div>
+    </div>
+    <div class="pc">
+      <div class="v2">v2 · SLOW MIXINS</div>
+      <div class="prob">Mixins could only drop files or run <code>apt-get</code> in a lifecycle hook —
+        which “makes the whole sandbox startup kind of slow.”</div>
+      <div class="v3">→ mixins are layers</div>
+      <div class="fix">real binary content (even whole Nix closures), no OS shipped</div>
+    </div>
+    <div class="pc">
+      <div class="v2">v2 · A CLOSED SCHEMA</div>
+      <div class="prob">Network policy, credential injection and agent context were hard-typed into the grammar.</div>
+      <div class="v3">→ open capability schema</div>
+      <div class="fix">new runtime capabilities plug in; unknown ones degrade</div>
+    </div>
+  </div>
+
+  <p>On top of those, v3 adds <code>provides</code> / <code>requires</code> — namespaced and versioned —
+  so kits can declare their dependencies and <code>sbx run</code> verifies the whole set is satisfied
+  before it starts. As the engineer put it, the goal was to make kits “more self-coherent… easier to
+  compose, with a lot more ways of expressing restrictions and dependencies.”</p>
+
+  <h2>Why migrate from v2 to v3</h2>
+  <p>If you already ship Kits, the move is a <strong>collapse, not a rewrite</strong>. A v2 kit was a
+  <code>spec.yaml</code> plus a separately-built named image, kept in sync by hand, with a patchwork of
+  bespoke blocks — <code>permissions.network</code>, <code>credentials[]</code>, <code>volumes[]</code>,
+  <code>ports[]</code>, setup hooks, <code>environment</code>, <code>agentInstructions</code>.</p>
+
+  <figure class="figure bleed">
+    <img src="assets/slide-18.webp" alt="v2 to v3 migration: a spec.yaml plus a named image and a patchwork of bespoke blocks collapse into one OCI image with one typed, versioned capabilities list." />
+    <figcaption>Every v2 block maps to a typed capability: <code>network-policy@1</code>, <code>credential@1</code>, <code>volume@1</code>, <code>port@1</code>, <code>lifecycle@1</code>, <code>agent-context@1</code>.</figcaption>
+  </figure>
+
+  <p>v3 collapses all of it into one OCI image and one typed, versioned <code>capabilities</code> list:
+  <code>kind: sandbox</code> becomes <code>kind: workload</code> with a Dockerfile recipe, and the
+  <code>setup</code> hooks become the <code>lifecycle</code> capability. Identity is now the
+  digest-pinned consumption reference, not a mutable <code>name:</code> field. The
+  same asks — now diffable, gatable, and composable. Decoding is strict, so a leftover v2 key is an
+  error rather than a silent no-op. One caveat worth knowing up front: v3 kits can't compose with v1 or
+  v2 kits, so don't mix the two. The <code>claude</code> and <code>claude-mixin</code> examples in
+  the repo are a real v2 kit migrated faithfully, and the spec ships a
+  <a href="https://github.com/docker/sandbox-kit-spec/blob/main/skills/migrate-kit-to-v3/FIELD-MAPPING.md">field-by-field mapping</a>
+  to walk you through it.</p>
+
+  <h2><span class="n">05 · A SPEC, NOT A FEATURE</span>Vendor-neutral by construction</h2>
+  <p>Why a specification and not a product feature? Because a Kit that stops being useful when you run
+  it somewhere else is not a trust boundary — it is lock-in. The grammar is normative, two conformance
+  suites ship with it (one asks “is this a valid Kit?”, the other “does this runtime behave to spec?”),
+  and capability types version independently — <code>network-policy@1</code> and <code>@2</code>
+  coexist, so Kits that resolve today keep resolving. Docker Sandboxes is a first-class implementation,
+  not the only one.</p>
+
+  <p>And while agents made this urgent, ordinary workloads always arrived with unwritten expectations
+  too — which endpoints they call, which credentials they need, which volumes must survive a restart.
+  That knowledge lived in Helm charts, runbooks, and colleagues. Kits make authority reproducible for
+  all of it — just as Dockerfiles made building reproducible.</p>
+
+  <h2>Try it</h2>
+  <p>Kits v3 ship in the stable <code>sbx</code> line, in both local and cloud mode. There is nothing
+  to install for the frontend itself — BuildKit pulls <code>docker/sandbox-kit:3</code> when it reads
+  the <code># syntax=</code> line.</p>
+
+<pre><span class="c"># install (macOS)</span>
+brew install docker/tap/sbx
+
+<span class="c"># run a published Kit — a shell workload + the Claude mixin</span>
+<span class="g">sbx run</span> docker/sbx-kit-shell:1.0.0 --kit docker/sbx-kit-claude-mixin .
+
+<span class="c"># the local loop — no registry, no push. Edit hello, re-run; only hello rebuilds.</span>
+cd examples
+<span class="g">sbx run</span> ./hello --kit ./gh .
+
+<span class="c"># the same references run in the cloud</span>
+sbx --cloud run docker/sbx-kit-shell:1.0.0 --kit docker/sbx-kit-claude-mixin</pre>
+
+  <figure class="figure bleed">
+    <img src="assets/slide-22.webp" alt="The road: install, run a published Kit, build hello, compose the tool mixin, bind the gh binary, then the local edit-and-run loop." />
+    <figcaption>Six steps, each one an ordinary Docker move — from a published Kit to the local edit-and-run loop.</figcaption>
+  </figure>
+
+  <div class="callout exp">
+    <strong>This specification is experimental.</strong> It is published to be used and argued with,
+    and it will keep moving as implementers find gaps. A final v3 is targeted for <strong>Q4 2026</strong>,
+    after community feedback. If a Kit you want to write cannot be expressed — or a runtime duty is
+    stated in a way you cannot implement — please
+    <a href="https://github.com/docker/sandbox-kit-spec/issues/new/choose">open an issue</a>.
+  </div>
+
+  <hr class="keyline" />
+  <p class="lead" style="text-align:center"><strong>Dockerfiles made software reproducible.<br/>Kits make authority reproducible.</strong></p>
+
+  <div class="cards">
+    <a class="card" href="https://github.com/docker/sandbox-kit-spec">
+      <div class="k">THE SPEC</div><h4>docker/sandbox-kit-spec</h4>
+      <p>Grammar, JSON schema, capability pages, and the conformance suites.</p></a>
+    <a class="card" href="https://docs.docker.com/ai/sandboxes/install/">
+      <div class="k">INSTALL sbx</div><h4>Docker Docs → Sandboxes</h4>
+      <p>The stable CLI, local and cloud. Rancher Desktop works; Docker Desktop not required.</p></a>
+    <a class="card" href="https://hub.docker.com/search?type=sbx_kit&badges=verified_publisher">
+      <div class="k">BROWSE KITS</div><h4>Verified Publisher Kits</h4>
+      <p>Browse v3 Kits on Docker Hub. The <code>docker</code> org publishes v3.</p></a>
+    <a class="card" href="https://github.com/docker/sandbox-kit-spec/blob/main/skills/migrate-kit-to-v3/FIELD-MAPPING.md">
+      <div class="k">MIGRATE</div><h4>v2 → v3 field mapping</h4>
+      <p>The field-by-field port, and the judgment calls a migration turns on.</p></a>
+  </div>
+
+</article>
+
+<footer><div class="in">
+  <span class="brand" style="color:#fff;font-weight:800;display:flex;align-items:center;gap:10px">
+    <svg width="26" height="20" viewBox="0 0 100 74"><use href="#whale"/></svg>
+    Docker <span style="color:var(--sky);letter-spacing:2px;font-size:12px">/ NEXT</span></span>
+  <span class="links">
+    <a href="https://github.com/docker/sandbox-kit-spec">Spec</a>
+    <a href="https://docs.docker.com/ai/sandboxes/install/">Install</a>
+    <a href="https://hub.docker.com/search?type=sbx_kit&badges=verified_publisher">Kits on Hub</a>
+    <a href="https://github.com/docker/sandbox-kit-spec/issues/new/choose">Open an issue</a>
+  </span>
+  <span style="font-size:13px;color:#7f92bb">Apache-2.0 · Experimental · v3 · Q4 2026 target</span>
+</div></footer>
+
+</body>
+</html>
